@@ -1,7 +1,7 @@
 # Bounded ranges: reproducible enough for CI, still receive patch/minor fixes.
 # Dependabot (pip) proposes bumps. Untested locally by the author of this change; CI is the check.
 ansible-core>=2.16,<2.18
-ansible-lint>=24.9,<27
+ansible-lint>=26.11.0,<27
 yamllint>=1.35,<2
 molecule>=24.9,<27
 molecule-plugins[docker]>=23.5,<27
