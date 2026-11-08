@@ -1,0 +1,3 @@
+---
+nginx_site_title: "{{ inventory_hostname }}"
+nginx_listen_port: 80

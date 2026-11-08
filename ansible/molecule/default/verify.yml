@@ -1,0 +1,41 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Read effective sshd configuration
+      ansible.builtin.command: /usr/sbin/sshd -T
+      register: verify_sshd
+      changed_when: false
+
+    - name: Assert SSH is hardened
+      ansible.builtin.assert:
+        that:
+          - "'permitrootlogin no' in verify_sshd.stdout_lines"
+          - "'passwordauthentication no' in verify_sshd.stdout_lines"
+          - "'x11forwarding no' in verify_sshd.stdout_lines"
+          - "'maxauthtries 3' in verify_sshd.stdout_lines"
+          - "'port 22' in verify_sshd.stdout_lines"
+
+    - name: Check automatic updates are configured
+      ansible.builtin.stat:
+        path: /etc/apt/apt.conf.d/20auto-upgrades
+      register: verify_auto_upgrades
+
+    - name: Assert automatic updates file exists
+      ansible.builtin.assert:
+        that: verify_auto_upgrades.stat.exists
+
+    - name: Request nginx landing page
+      ansible.builtin.uri:
+        url: http://127.0.0.1/
+        return_content: true
+      register: verify_nginx
+
+    - name: Assert nginx is hardened
+      ansible.builtin.assert:
+        that:
+          - verify_nginx.status == 200
+          - "'nginx/' not in (verify_nginx.server | default(''))"
+          - verify_nginx.x_content_type_options | default('') == 'nosniff'

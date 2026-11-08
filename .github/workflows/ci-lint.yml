@@ -1,0 +1,102 @@
+---
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  terraform:
+    name: Terraform (fmt, validate, tflint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Format check
+        run: terraform fmt -check -recursive -diff
+        working-directory: terraform
+
+      - name: Init (no backend)
+        run: terraform init -backend=false -input=false
+        working-directory: terraform
+
+      - name: Validate
+        run: terraform validate
+        working-directory: terraform
+
+      - uses: terraform-linters/setup-tflint@v4
+
+      - name: TFLint
+        run: |
+          tflint --init
+          tflint --recursive --config "$GITHUB_WORKSPACE/.tflint.hcl"
+        working-directory: terraform
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  ansible:
+    name: Ansible (yamllint, ansible-lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tooling
+        run: pip install -r requirements-dev.txt
+
+      - name: Install collections
+        run: ansible-galaxy collection install -r ansible/requirements.yml
+
+      - name: yamllint
+        run: yamllint -c .yamllint ansible .github
+
+      - name: ansible-lint
+        run: ansible-lint
+        working-directory: ansible
+
+      - name: Syntax check
+        run: |
+          printf '[all]\nlocalhost ansible_connection=local\n' > /tmp/inv.ini
+          for p in playbooks/*.yml; do
+            ansible-playbook -i /tmp/inv.ini --syntax-check "$p"
+          done
+        working-directory: ansible
+
+  molecule:
+    name: Molecule (Docker)
+    runs-on: ubuntu-latest
+    needs: ansible
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tooling
+        run: pip install -r requirements-dev.txt
+
+      - name: Install collections
+        run: ansible-galaxy collection install -r ansible/requirements.yml
+
+      - name: Molecule test (converge, idempotence, verify)
+        run: molecule test
+        working-directory: ansible
+        env:
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"

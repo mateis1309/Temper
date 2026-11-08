@@ -1,0 +1,12 @@
+---
+# Fail the play when any check fails (set false to only report).
+audit_fail_on_findings: true
+# Write a JSON report per host on the control node (empty string disables).
+audit_report_dir: "{{ playbook_dir }}/../reports"
+# Check groups. Disable those that cannot apply (e.g. inside containers).
+audit_check_firewall: true
+audit_check_sysctl: true
+audit_check_fail2ban: true
+audit_sshd_binary: /usr/sbin/sshd
+# Expected sshd port; keep in sync with hardening_ssh_port.
+audit_ssh_port: "{{ hardening_ssh_port | default(22) }}"

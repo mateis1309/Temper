@@ -1,0 +1,13 @@
+---
+# Full pipeline: baseline -> hardening -> services -> audit
+- name: Apply baseline configuration
+  ansible.builtin.import_playbook: baseline.yml
+
+- name: Apply security hardening
+  ansible.builtin.import_playbook: hardening.yml
+
+- name: Deploy services
+  ansible.builtin.import_playbook: services.yml
+
+- name: Run compliance audit
+  ansible.builtin.import_playbook: audit.yml

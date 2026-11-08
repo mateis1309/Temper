@@ -1,0 +1,3 @@
+---
+hardening_ufw_allowed_tcp_ports:
+  - 80

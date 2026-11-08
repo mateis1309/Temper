@@ -1,0 +1,45 @@
+---
+# --- SSH ---
+hardening_ssh_max_auth_tries: 3
+hardening_ssh_login_grace_time: 30
+hardening_ssh_client_alive_interval: 300
+hardening_ssh_client_alive_count_max: 2
+hardening_ssh_allow_tcp_forwarding: false
+hardening_ssh_port: 22
+hardening_sshd_binary: /usr/sbin/sshd
+hardening_ssh_service: ssh
+
+# --- Firewall (UFW) ---
+hardening_ufw_enabled: true
+hardening_ufw_allowed_tcp_ports: []
+
+# --- Automatic security updates ---
+hardening_unattended_upgrades: true
+hardening_auto_reboot: false
+
+# --- fail2ban ---
+hardening_fail2ban_enabled: true
+hardening_fail2ban_bantime: 3600
+hardening_fail2ban_findtime: 600
+hardening_fail2ban_maxretry: 5
+
+# --- Kernel parameters ---
+hardening_sysctl_enabled: true
+hardening_sysctl:
+  net.ipv4.conf.all.rp_filter: 1
+  net.ipv4.conf.default.rp_filter: 1
+  net.ipv4.conf.all.accept_redirects: 0
+  net.ipv4.conf.default.accept_redirects: 0
+  net.ipv4.conf.all.send_redirects: 0
+  net.ipv4.conf.all.log_martians: 1
+  net.ipv4.tcp_syncookies: 1
+  net.ipv6.conf.all.accept_redirects: 0
+  kernel.kptr_restrict: 2
+  kernel.dmesg_restrict: 1
+  fs.suid_dumpable: 0
+
+# --- Log retention ---
+hardening_journald_system_max_use: 500M
+hardening_journald_max_retention: 1month
+hardening_app_log_glob: /var/log/apps/*.log
+hardening_app_log_rotate_count: 8

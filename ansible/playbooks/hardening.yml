@@ -1,0 +1,6 @@
+---
+- name: Security hardening baseline
+  hosts: all
+  become: true
+  roles:
+    - role: hardening

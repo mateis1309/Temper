@@ -1,0 +1,45 @@
+---
+- name: Create journald drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Persist journal and cap its size
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf.d/99-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Temper (Ansible) - local changes will be overwritten
+      [Journal]
+      Storage=persistent
+      SystemMaxUse={{ hardening_journald_system_max_use }}
+      MaxRetentionSec={{ hardening_journald_max_retention }}
+  notify: Restart journald
+
+- name: Install logrotate
+  ansible.builtin.apt:
+    name: logrotate
+    state: present
+
+- name: Rotate application logs
+  ansible.builtin.copy:
+    dest: /etc/logrotate.d/temper-apps
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Temper (Ansible) - local changes will be overwritten
+      {{ hardening_app_log_glob }} {
+          weekly
+          rotate {{ hardening_app_log_rotate_count }}
+          compress
+          delaycompress
+          missingok
+          notifempty
+          copytruncate
+      }

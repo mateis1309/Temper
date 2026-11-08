@@ -1,0 +1,6 @@
+---
+- name: Deploy web tier
+  hosts: web
+  become: true
+  roles:
+    - role: nginx

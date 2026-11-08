@@ -1,0 +1,42 @@
+---
+- name: Assert supported OS family
+  ansible.builtin.assert:
+    that: ansible_facts['os_family'] == 'Debian'
+    fail_msg: "This role supports Debian-family systems only."
+    quiet: true
+
+- name: Safety check - refuse to lock out a root-based connection
+  ansible.builtin.assert:
+    that: (ansible_user | default('')) != 'root'
+    fail_msg: >-
+      Connecting as root while this role disables root SSH login would lock you out.
+      Connect as a sudo-capable admin user instead.
+    quiet: true
+
+- name: Configure SSH
+  ansible.builtin.import_tasks: ssh.yml
+  tags: [ssh]
+
+- name: Configure firewall
+  ansible.builtin.import_tasks: firewall.yml
+  when: hardening_ufw_enabled | bool
+  tags: [firewall]
+
+- name: Configure automatic updates
+  ansible.builtin.import_tasks: updates.yml
+  when: hardening_unattended_upgrades | bool
+  tags: [updates]
+
+- name: Configure fail2ban
+  ansible.builtin.import_tasks: fail2ban.yml
+  when: hardening_fail2ban_enabled | bool
+  tags: [fail2ban]
+
+- name: Configure kernel parameters
+  ansible.builtin.import_tasks: sysctl.yml
+  when: hardening_sysctl_enabled | bool
+  tags: [sysctl]
+
+- name: Configure log retention
+  ansible.builtin.import_tasks: logging.yml
+  tags: [logging]

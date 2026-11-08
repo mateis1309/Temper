@@ -1,0 +1,11 @@
+# cp terraform.tfvars.example terraform.tfvars
+name_prefix          = "temper"
+admin_user           = "ops"
+ssh_public_key_path  = "~/.ssh/id_ed25519.pub"
+ssh_private_key_path = "~/.ssh/id_ed25519"
+
+nodes = {
+  "web-01"  = { role = "web", vcpu = 2, memory_mb = 2048 }
+  "web-02"  = { role = "web" }
+  "util-01" = { role = "utility", memory_mb = 512 }
+}

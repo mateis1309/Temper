@@ -1,0 +1,13 @@
+---
+galaxy_info:
+  role_name: common
+  author: Temper contributors
+  description: Base packages, timezone and hygiene for Debian-family hosts.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Ubuntu
+      versions: [jammy, noble]
+    - name: Debian
+      versions: [bookworm]
+dependencies: []

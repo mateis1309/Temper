@@ -1,0 +1,28 @@
+---
+- name: Install unattended-upgrades
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: present
+
+- name: Enable periodic unattended upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      // Managed by Temper (Ansible) - local changes will be overwritten
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::AutocleanInterval "7";
+
+- name: Configure automatic reboot policy
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/52unattended-upgrades-local
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      // Managed by Temper (Ansible) - local changes will be overwritten
+      Unattended-Upgrade::Automatic-Reboot "{{ 'true' if hardening_auto_reboot else 'false' }}";
+      Unattended-Upgrade::Remove-Unused-Dependencies "true";

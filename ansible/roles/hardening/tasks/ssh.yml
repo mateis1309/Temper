@@ -1,0 +1,26 @@
+---
+# A drop-in named 00-* is read first; sshd uses the first value it sees,
+# so this file wins over cloud-init's 50-cloud-init.conf.
+- name: Deploy SSH hardening drop-in
+  block:
+    - name: Install sshd hardening configuration
+      ansible.builtin.template:
+        src: sshd_hardening.conf.j2
+        dest: /etc/ssh/sshd_config.d/00-hardening.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart sshd
+
+    - name: Validate sshd configuration
+      ansible.builtin.command: "{{ hardening_sshd_binary }} -t"
+      changed_when: false
+  rescue:
+    - name: Remove invalid sshd drop-in
+      ansible.builtin.file:
+        path: /etc/ssh/sshd_config.d/00-hardening.conf
+        state: absent
+
+    - name: Abort after failed sshd validation
+      ansible.builtin.fail:
+        msg: "sshd configuration failed validation; the drop-in was removed."

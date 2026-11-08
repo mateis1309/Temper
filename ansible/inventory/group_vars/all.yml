@@ -1,0 +1,4 @@
+---
+# Settings applied to every host. Override per group in sibling files.
+# Role defaults live in roles/*/defaults/main.yml; only set differences here.
+common_timezone: UTC

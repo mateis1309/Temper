@@ -1,0 +1,13 @@
+---
+galaxy_info:
+  role_name: hardening
+  author: Temper contributors
+  description: SSH, UFW, fail2ban, unattended upgrades, sysctl and log retention hardening.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Ubuntu
+      versions: [jammy, noble]
+    - name: Debian
+      versions: [bookworm]
+dependencies: []

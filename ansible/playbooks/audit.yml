@@ -1,0 +1,6 @@
+---
+- name: Compliance audit (read-only)
+  hosts: all
+  become: true
+  roles:
+    - role: audit

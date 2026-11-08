@@ -1,0 +1,92 @@
+---
+- name: Read effective sshd configuration
+  ansible.builtin.command: "{{ audit_sshd_binary }} -T"
+  register: audit_sshd
+  changed_when: false
+  check_mode: false
+
+- name: Evaluate SSH checks
+  ansible.builtin.set_fact:
+    audit_checks:
+      ssh_root_login_disabled: "{{ ('permitrootlogin no' in audit_sshd.stdout_lines) | bool }}"
+      ssh_password_auth_disabled: "{{ ('passwordauthentication no' in audit_sshd.stdout_lines) | bool }}"
+      ssh_x11_forwarding_disabled: "{{ ('x11forwarding no' in audit_sshd.stdout_lines) | bool }}"
+      ssh_port_matches: "{{ ('port ' ~ audit_ssh_port) in audit_sshd.stdout_lines }}"
+
+- name: Firewall checks
+  when: audit_check_firewall | bool
+  block:
+    - name: Read ufw status
+      ansible.builtin.command: ufw status verbose
+      register: audit_ufw
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Evaluate firewall checks
+      ansible.builtin.set_fact:
+        audit_checks: >-
+          {{ audit_checks | combine({
+            'firewall_active': ('Status: active' in audit_ufw.stdout) | bool,
+            'firewall_default_deny_incoming': ('deny (incoming)' in audit_ufw.stdout) | bool
+          }) }}
+
+- name: Fail2ban checks
+  when: audit_check_fail2ban | bool
+  block:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Evaluate fail2ban check
+      ansible.builtin.set_fact:
+        audit_checks: >-
+          {{ audit_checks | combine({
+            'fail2ban_running': ((ansible_facts.services['fail2ban.service'] | default({})).get('state', '') == 'running') | bool
+          }) }}
+
+- name: Kernel parameter checks
+  when: audit_check_sysctl | bool
+  block:
+    - name: Read kernel parameters
+      ansible.builtin.command: "sysctl -n {{ item }}"
+      loop:
+        - net.ipv4.tcp_syncookies
+        - net.ipv4.conf.all.rp_filter
+      register: audit_sysctl
+      changed_when: false
+      check_mode: false
+
+    - name: Evaluate kernel checks
+      ansible.builtin.set_fact:
+        audit_checks: >-
+          {{ audit_checks | combine({
+            'syncookies_enabled': (audit_sysctl.results[0].stdout == '1') | bool,
+            'rp_filter_enabled': (audit_sysctl.results[1].stdout == '1') | bool
+          }) }}
+
+- name: Compute findings
+  ansible.builtin.set_fact:
+    audit_findings: "{{ audit_checks | dict2items | rejectattr('value') | map(attribute='key') | list }}"
+
+- name: Show audit summary
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      passed: "{{ audit_checks | dict2items | selectattr('value') | list | length }}"
+      failed: "{{ audit_findings }}"
+
+- name: Write JSON report on the control node
+  ansible.builtin.copy:
+    dest: "{{ audit_report_dir }}/{{ inventory_hostname }}.json"
+    content: "{{ {'host': inventory_hostname, 'checks': audit_checks, 'findings': audit_findings} | to_nice_json }}"
+    mode: "0644"
+  delegate_to: localhost
+  become: false
+  when: audit_report_dir | length > 0
+
+- name: Fail when findings exist
+  ansible.builtin.fail:
+    msg: "Audit failed on {{ inventory_hostname }}: {{ audit_findings | join(', ') }}"
+  when:
+    - audit_fail_on_findings | bool
+    - audit_findings | length > 0

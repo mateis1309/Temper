@@ -1,0 +1,63 @@
+---
+- name: Assert supported OS family
+  ansible.builtin.assert:
+    that: ansible_facts['os_family'] == 'Debian'
+    fail_msg: "This role supports Debian-family systems only."
+    quiet: true
+
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Deploy hardened server configuration
+  ansible.builtin.template:
+    src: default-site.conf.j2
+    dest: /etc/nginx/sites-available/default
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Disable version disclosure
+  ansible.builtin.copy:
+    dest: /etc/nginx/conf.d/00-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Temper (Ansible) - local changes will be overwritten
+      server_tokens off;
+  notify: Reload nginx
+
+- name: Deploy landing page
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: /var/www/html/index.html
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Validate nginx configuration
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Ensure nginx is running
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Flush handlers before smoke test
+  ansible.builtin.meta: flush_handlers
+
+- name: Smoke test - local HTTP request
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ nginx_listen_port }}/"
+    status_code: 200
+  register: nginx_smoke
+  retries: 5
+  delay: 2
+  until: nginx_smoke.status == 200
